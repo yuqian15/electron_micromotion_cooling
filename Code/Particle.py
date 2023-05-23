@@ -11,6 +11,7 @@ from tqdm import tqdm
 from JohnsonNyquistNoise import noise_on_trap
 
 
+
 class Sinlge_Electron_Cooling(object):
     def __init__(self, Vec0, ParticleParameters = {}, TrapParameters = {}, CircuitParameters = {}, SimulationParameters = {}):
         
@@ -152,7 +153,9 @@ class Sinlge_Electron_Cooling(object):
         return vx, vy, vz, ax, ay, az
     
     def InitialRun(self, T_init, dt, DrawPosition = False, DrawSpectrum = False):
-        T_init = self.SimulationParameters['TotalTime']
+        T_init = 2 * self.SimulationParameters['TotalTime']
+        if T_init < 10e-6:
+            T_init = 10e-6
         N = round(T_init / dt)
         progress_bar = tqdm(total=T_init, desc='Initial Simulation for {:.2f} us, time:'.format(T_init * 1e6), position=0, leave=True)
         
@@ -364,7 +367,14 @@ class Sinlge_Electron_Cooling(object):
 
         # This is for damping factor and time domain method
 
-        solution = solve_ivp(fun=lambda t, Vec: self.DevMotion_para(t, Vec, Damping_Ex_Ampl, fres, phase, progress_bar, JNNoise_Ex, True), 
+        solution = solve_ivp(fun=lambda t, Vec: self.DevMotion_para(t, 
+                                                                    Vec, 
+                                                                    Damping_Ex_Ampl, 
+                                                                    fres, 
+                                                                    phase, 
+                                                                    progress_bar, 
+                                                                    JNNoise_Ex, 
+                                                                    WithNoise = False), 
                             t_span = (0, T), 
                             y0 = Vec0, 
                             t_eval = t_eval, 
@@ -471,6 +481,8 @@ class Sinlge_Electron_Cooling(object):
         return t_damp[peaks[-1]]
     
     def Run(self):
+        #sys.modules[__name__].__dict__.clear()
+        #get_ipython().magic('reset -sf')
         TotalTime = self.SimulationParameters['TotalTime']
         dt = self.SimulationParameters['dt']
 
