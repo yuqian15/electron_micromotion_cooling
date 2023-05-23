@@ -175,6 +175,7 @@ class Sinlge_Electron_Cooling(object):
         progress_bar.close()
 
         if DrawPosition:
+            plt.clf()
             # Plot the x-axis motion
             fig1, ax = plt.subplots(1,2)
 
@@ -242,6 +243,7 @@ class Sinlge_Electron_Cooling(object):
 
         print("The location of the three largest peaks is {}, {}, {} Hz".format(tf[peaks[0]], tf[peaks[1]], tf[peaks[2]]))
         if DrawSpectrum:
+            plt.clf()
             # Plot the result
             plt.plot(ttf, N_vf_init)
             plt.plot(ttf[peaks], N_vf_init[peaks], "x")
@@ -381,6 +383,7 @@ class Sinlge_Electron_Cooling(object):
 
         progress_bar.close()
         if DrawPosition:
+            plt.clf()
             # Plot the x-axis motion
             fig1, ax = plt.subplots(1,2)
 
@@ -417,6 +420,7 @@ class Sinlge_Electron_Cooling(object):
 
 
         if DrawVelocity:
+            plt.clf()
             plt.plot(np.array(t_damp[:len(x_damp) // 500 * 500])*1e6, vx_damp[:len(x_damp) // 500 * 500],\
                     label = '$\omega_r$:{}GHz, $\omega_m$:{}GHz, $\omega_z$:{}MHz'.format(wrf/2/np.pi/1e9, wradical/2/np.pi/1e9, waxial/2/np.pi/1e6))
             plt.plot(np.array(t_damp[:len(x_damp) // 500 * 500])*1e6, vx_abs_init / np.sqrt(e) * np.ones(len(x_damp))[:len(x_damp) // 500 * 500], 'r--', label = '$1/\sqrt{e}$')
@@ -442,7 +446,8 @@ class Sinlge_Electron_Cooling(object):
 
             plt.grid()
             FileName = '{}_Wrf = {:.2f}_Wradical = {:.2f}_Waxial = {:.2f}_T = {:.2f}us'.format(CoolingMode, wrf, wradical, waxial, T * 1e6)
-            plt.savefig('figures/' + FileName + '.png')
+            if SaveFig:
+                plt.savefig('figures/' + FileName + '.png')
             plt.show(block=False)
             
         # Decide whether save data
@@ -471,9 +476,9 @@ class Sinlge_Electron_Cooling(object):
 
         Damping_Ex_Ampl, fres, phase = self.InitialRun(TotalTime, dt, False, False)
         Cooling_Time = self.SecondRun(Damping_Ex_Ampl, fres, phase, 
-                                      DrawPosition = True,
+                                      DrawPosition = False,
                                       DrawVelocity = True, 
-                                      SaveData = True,
+                                      SaveData = False,
                                       SaveFig = True)
 
         return Cooling_Time
