@@ -347,6 +347,43 @@ class Sinlge_Electron_Cooling(object):
         progress_bar.update(dt / 6)
         return vx_init, vy_init, vz_init, ax_init, ay_init, az_init, vx, vy, vz, ax, ay, az
     
+
+    # input a list of position, time and velocity
+
+    def Vps(self, Vec, t):
+        q = self.ParticleParameters['charge']
+        m = self.ParticleParameters['mass']
+        wrf = self.TrapParameters['wrf']
+
+        Ex, Ey, Ez = self.Erf(Vec, t)
+        return q ** 2 / 4 / m / wrf ** 2 * (Ex ** 2 + Ey ** 2 + Ez ** 2)
+
+    # Calculte for the kinetic energy
+
+    def Ekin(self, Vec, t):
+        m = self.ParticleParameters['mass']
+        x, y, z, vx, vy, vz = Vec
+        return 0.5 * m * (vx ** 2 + vy ** 2 + vz ** 2)
+
+    def EnergyCalculation(self, Vec_damp, t, NumPeriod):
+        E_sec = []
+        t_damp = Vec_damp[0, :]
+        x_damp = Vec_damp[1, :]
+        y_damp = Vec_damp[2, :]
+        z_damp = Vec_damp[3, :]
+        vx_damp = Vec_damp[4, :]
+        vy_damp = Vec_damp[5, :]
+        vz_damp = Vec_damp[6, :]
+
+        N = len(t_damp)
+        SampleList = np.arange()
+        for i in range(N - NumPeriod):
+            E_sec_temp = 0
+            for j in range():
+                Vec = x_damp[i + j], y_damp[i + j], z_damp[i + j], vx_damp[i + j], vy_damp[i + j], vz_damp[i + j]
+                E_sec_temp = E_sec_temp + Vdc(Vec, t_eval[i + j]) + Vrf(Vec, t_eval[i + j]) + Ekin(Vec, t_eval[i + j])
+        E_sec.append(E_sec_temp / Nsec)
+
     def SecondRun(self, Damping_Ex_Ampl, fres, phase, DrawPosition = True, DrawVelocity = True, SaveData = False, SaveFig = True):
         T = self.SimulationParameters['TotalTime']
         dt = self.SimulationParameters['dt']
@@ -423,6 +460,8 @@ class Sinlge_Electron_Cooling(object):
 
         peaks, heights = find_peaks(vx_damp, height= vx_abs_init/ np.sqrt(e))
 
+        m = self.ParticleParameters['mass']
+        q = self.ParticleParameters['charge']
         CoolingMode = self.SimulationParameters['CoolingMode']
         wrf = self.TrapParameters['wrf']
         waxial = self.TrapParameters['waxial']
@@ -432,12 +471,16 @@ class Sinlge_Electron_Cooling(object):
         if DrawVelocity:
             plt.clf()
             plt.plot(np.array(t_damp[:len(x_damp) // 500 * 500])*1e6, vx_damp[:len(x_damp) // 500 * 500],\
-                    label = '$\omega_r$:{}GHz, $\omega_m$:{}GHz, $\omega_z$:{}MHz'.format(wrf/2/np.pi/1e9, wradical/2/np.pi/1e9, waxial/2/np.pi/1e6))
+                    label = '$\Omega_rf$:{}GHz, $\omega_r$:{}GHz, $\omega_z$:{}MHz'.format(wrf/2/np.pi/1e9, wradical/2/np.pi/1e9, waxial/2/np.pi/1e6))
             plt.plot(np.array(t_damp[:len(x_damp) // 500 * 500])*1e6, vx_abs_init / np.sqrt(e) * np.ones(len(x_damp))[:len(x_damp) // 500 * 500], 'r--', label = '$1/\sqrt{e}$')
             plt.plot(np.array(t_damp[:len(x_damp) // 500 * 500])*1e6, -vx_abs_init / np.sqrt(e) * np.ones(len(x_damp))[:len(x_damp) // 500 * 500], 'r--')
             plt.plot(np.array(t_damp[peaks[-1]])*1e6, vx_damp[peaks[-1]], "x")
             plt.text(np.array(t_damp[peaks[-1]])*1e6, vx_damp[peaks[-1]], "%.2f $\mu$s" % (float(t_damp[peaks[-1]]) * 1e6))
             #ax[0].plot(np.array(t_eval[:len(x_damp)])*1e6, x_damp[:len(x_damp)])
+           
+            # Add estimated cooling time for secular cooling
+            if CoolingMode == 'secular':
+                plt.plot(m * deff ** 2/ q ** 2/ Rp * 1e6 * np.ones(1000), np.linspace(-2e5, 2e5, 1000), '--', color = 'orange')
 
             # Add labels to the axes
             plt.xlabel('Time($\mu$s)')
@@ -461,7 +504,6 @@ class Sinlge_Electron_Cooling(object):
             plt.show(block=False)
             
         # Decide whether save data
-        
 
         if SaveData:
             FileName = '{}_Wrf = {:.2f}_Wradical = {:.2f}_Waxial = {:.2f}_T = {:.2f}us'.format(CoolingMode, wrf, wradical, waxial, T * 1e6)
@@ -478,9 +520,9 @@ class Sinlge_Electron_Cooling(object):
         else:
             print('Cooling Time is: {:.3f} us'.format(t_damp[peaks[-1]] * 1e6))
         #clear
-        # 
         return t_damp[peaks[-1]]
     
+
     def Run(self):
         #sys.modules[__name__].__dict__.clear()
         #get_ipython().magic('reset -sf')
