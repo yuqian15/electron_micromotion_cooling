@@ -432,7 +432,7 @@ class Sinlge_Electron_Cooling(object):
         if DrawVelocity:
             plt.clf()
             plt.plot(np.array(t_damp[:len(x_damp) // 500 * 500])*1e6, vx_damp[:len(x_damp) // 500 * 500],\
-                    label = '$\omega_r$:{}GHz, $\omega_m$:{}GHz, $\omega_z$:{}MHz'.format(wrf/2/np.pi/1e9, wradical/2/np.pi/1e9, waxial/2/np.pi/1e6))
+                    label = '$\Omega_rf$:{}GHz, $\omega_r$:{}GHz, $\omega_z$:{}MHz'.format(wrf/2/np.pi/1e9, wradical/2/np.pi/1e9, waxial/2/np.pi/1e6))
             plt.plot(np.array(t_damp[:len(x_damp) // 500 * 500])*1e6, vx_abs_init / np.sqrt(e) * np.ones(len(x_damp))[:len(x_damp) // 500 * 500], 'r--', label = '$1/\sqrt{e}$')
             plt.plot(np.array(t_damp[:len(x_damp) // 500 * 500])*1e6, -vx_abs_init / np.sqrt(e) * np.ones(len(x_damp))[:len(x_damp) // 500 * 500], 'r--')
             plt.plot(np.array(t_damp[peaks[-1]])*1e6, vx_damp[peaks[-1]], "x")
@@ -489,9 +489,9 @@ class Sinlge_Electron_Cooling(object):
         Damping_Ex_Ampl, fres, phase = self.InitialRun(TotalTime, dt, False, False)
         Cooling_Time = self.SecondRun(Damping_Ex_Ampl, fres, phase, 
                                       DrawPosition = False,
-                                      DrawVelocity = True, 
+                                      DrawVelocity = False, 
                                       SaveData = False,
-                                      SaveFig = True)
+                                      SaveFig = False)
 
         return Cooling_Time
 
