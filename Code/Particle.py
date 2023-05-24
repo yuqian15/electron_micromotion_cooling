@@ -477,7 +477,8 @@ class Sinlge_Electron_Cooling(object):
             print('Cooling Failed')
         else:
             print('Cooling Time is: {:.3f} us'.format(t_damp[peaks[-1]] * 1e6))
-
+        #clear
+        # 
         return t_damp[peaks[-1]]
     
     def Run(self):
