@@ -482,6 +482,7 @@ class Sinlge_Electron_Cooling(object):
         Energy_fitfunc  = lambda p, x: p[0]*np.exp(- x/p[1])+p[2]
         Energy_errfunc  = lambda p, x, y: (y - Energy_fitfunc(p, x))
 
+        plt.clf()
         Energy_n, Energy_bin_edges,_ = plt.hist(Energy, 60, density=True, color='green', alpha=0.75)
         xdata = 0.5*(Energy_bin_edges[1:] + Energy_bin_edges[:-1])
         ydata = Energy_n
@@ -503,8 +504,9 @@ class Sinlge_Electron_Cooling(object):
             
             FileName = 'Histogram for Energy'
             plt.title(r'$A = %.3f\ \sigma = %.3f\ k = %.3f $' %(c[0],abs(c[1]),c[2]))
-            plt.show()
+            
             plt.savefig('figures/' + FileName + '.png')
+            plt.show()
         else:
             plt.plot(xdata, Energy_fitfunc(c, xdata))
             plt.plot(xdata, ydata)
@@ -517,6 +519,7 @@ class Sinlge_Electron_Cooling(object):
         Velocity_fitfunc  = lambda p, x: p[0]*np.exp(- 0.5 * ((x-p[1])/p[2]) ** 2)+p[3]
         Velocity_errfunc  = lambda p, x, y: (y - Velocity_fitfunc(p, x))
 
+        plt.clf()
         Velocity_n, Velocity_bin_edges,_ = plt.hist(vx_damp, 60, density=True, color='green', alpha=0.75)
         xdata = 0.5*(Velocity_bin_edges[1:] + Velocity_bin_edges[:-1])
         ydata = Velocity_n
@@ -534,9 +537,10 @@ class Sinlge_Electron_Cooling(object):
             plt.plot(xdata, Velocity_fitfunc(c, xdata))
             plt.plot(xdata, ydata)
             plt.title(r'$A = %.3f\  \mu = %.3f\  \sigma = %.3f\ k = %.3f $' %(c[0],c[1],abs(c[2]),c[3]))
-            plt.show()
+            
             FileName = 'Histogram for Velocity'
             plt.savefig('figures/' + FileName + '.png')
+            plt.show()
         else:
             plt.show(block = False)
         return c[2]
