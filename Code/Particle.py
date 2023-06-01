@@ -451,22 +451,23 @@ class Sinlge_Electron_Cooling(object):
         return 0.5 * m * (vx ** 2 + vy ** 2 + vz ** 2)
 
     def FinalTemperatureCalculation(self, Vec_damp, NumPeriod, CoolingTime, 
-                                    DrawEnergyHist = True,
-                                    DrawVelocityHist = True):
+                                    DrawEnergyHist = False,
+                                    DrawVelocityHist = False):
         dt = self.SimulationParameters['dt']
         Energy = []
+        EquilibriumTime = 2
         # we assume that after 4 cooling Time: e^-4, the motion is dominant by the noise
-        t_damp = Vec_damp[0, 4 * round(CoolingTime / dt):]
-        x_damp = Vec_damp[1, 4 * round(CoolingTime / dt):]
-        y_damp = Vec_damp[2, 4 * round(CoolingTime / dt):]
-        z_damp = Vec_damp[3, 4 * round(CoolingTime / dt):]
-        vx_damp = Vec_damp[4, 4 * round(CoolingTime / dt):]
-        vy_damp = Vec_damp[5, 4 * round(CoolingTime / dt):]
-        vz_damp = Vec_damp[6, 4 * round(CoolingTime / dt):]
+        t_damp = Vec_damp[0, EquilibriumTime * round(CoolingTime / dt):]
+        x_damp = Vec_damp[1, EquilibriumTime * round(CoolingTime / dt):]
+        y_damp = Vec_damp[2, EquilibriumTime * round(CoolingTime / dt):]
+        z_damp = Vec_damp[3, EquilibriumTime * round(CoolingTime / dt):]
+        vx_damp = Vec_damp[4, EquilibriumTime * round(CoolingTime / dt):]
+        vy_damp = Vec_damp[5, EquilibriumTime * round(CoolingTime / dt):]
+        vz_damp = Vec_damp[6, EquilibriumTime * round(CoolingTime / dt):]
 
         N = len(t_damp)
         SampleList = np.arange(0, N, NumPeriod)
-
+        print(SampleList)  
         # we didn't use the pesudopotential approximation till now.
         '''
         all direction of x, y, z energy(potential and kinetic energy), average over a waxial period
@@ -476,14 +477,23 @@ class Sinlge_Electron_Cooling(object):
             for j in range(NumPeriod):
                 Vec = x_damp[i + j], y_damp[i + j], z_damp[i + j], vx_damp[i + j], vy_damp[i + j], vz_damp[i + j]
                 Energy_temp = Energy_temp + self.Vdc(Vec, t_damp[i + j]) + self.Vrf(Vec, t_damp[i + j]) + self.Ekin(Vec, t_damp[i + j])
+
             Energy.append(Energy_temp / NumPeriod)
-        
+        print(Energy)        
         # best fit of Energy Hist
         Energy_fitfunc  = lambda p, x: p[0]*np.exp(- x/p[1])+p[2]
         Energy_errfunc  = lambda p, x, y: (y - Energy_fitfunc(p, x))
+        plt.clf()
+        plt.plot(Energy)
+        plt.savefig('figures/' + 'time vs Energy' + '.png')
+        plt.show()
 
         plt.clf()
-        Energy_n, Energy_bin_edges,_ = plt.hist(Energy, 60, density=True, color='green', alpha=0.75)
+        Energy_n, Energy_bin_edges,_ = plt.hist(Energy, 1000, density=True, color='green', label = 'Histogram')
+        print(Energy_n)
+        print(Energy_bin_edges)
+        plt.title('Histogram for Energy')
+        plt.show()
         xdata = 0.5*(Energy_bin_edges[1:] + Energy_bin_edges[:-1])
         ydata = Energy_n
 
@@ -499,8 +509,8 @@ class Sinlge_Electron_Cooling(object):
 
         
         if DrawEnergyHist:
-            plt.plot(xdata, Energy_fitfunc(c, xdata))
-            plt.plot(xdata, ydata)
+            #plt.plot(xdata, Energy_fitfunc(c, xdata), label = 'Fitting Curve')
+            plt.plot(xdata, ydata, label = 'raw data')
             
             FileName = 'Histogram for Energy'
             plt.title(r'$A = %.3f\ \sigma = %.3f\ k = %.3f $' %(c[0],abs(c[1]),c[2]))
@@ -510,7 +520,7 @@ class Sinlge_Electron_Cooling(object):
         else:
             plt.plot(xdata, Energy_fitfunc(c, xdata))
             plt.plot(xdata, ydata)
-            plt.title(r'$A = %.3f\  \mu = %.3f\  \sigma = %.3f\ k = %.3f $' %(c[0],abs(c[1]),c[2]))
+            plt.title(r'$A = %.3f\ \sigma = %.3f\ k = %.3f $' %(c[0],abs(c[1]),c[2]))
             plt.show(block = False)
         
         '''
@@ -518,9 +528,11 @@ class Sinlge_Electron_Cooling(object):
         '''
         Velocity_fitfunc  = lambda p, x: p[0]*np.exp(- 0.5 * ((x-p[1])/p[2]) ** 2)+p[3]
         Velocity_errfunc  = lambda p, x, y: (y - Velocity_fitfunc(p, x))
-
+       
         plt.clf()
         Velocity_n, Velocity_bin_edges,_ = plt.hist(vx_damp, 60, density=True, color='green', alpha=0.75)
+        plt.title('Histogram for velocity')
+        plt.show()
         xdata = 0.5*(Velocity_bin_edges[1:] + Velocity_bin_edges[:-1])
         ydata = Velocity_n
 
@@ -534,7 +546,7 @@ class Sinlge_Electron_Cooling(object):
         print("Fit Coefficients:")
         print(c[0],c[1],abs(c[2]),c[3])
         if DrawVelocityHist:
-            plt.plot(xdata, Velocity_fitfunc(c, xdata))
+            #plt.plot(xdata, Velocity_fitfunc(c, xdata))
             plt.plot(xdata, ydata)
             plt.title(r'$A = %.3f\  \mu = %.3f\  \sigma = %.3f\ k = %.3f $' %(c[0],c[1],abs(c[2]),c[3]))
             
@@ -556,6 +568,7 @@ class Sinlge_Electron_Cooling(object):
                   SaveFig = True,
                   #FinalTemperature = True
                   ):
+        print(NumSecularPeriod)
         T = self.SimulationParameters['TotalTime']
         dt = self.SimulationParameters['dt']
         N = int(np.round(T / dt))
@@ -697,6 +710,7 @@ class Sinlge_Electron_Cooling(object):
         
         FinalTemperature = self.FinalTemperatureCalculation(np.array([t_damp, x_damp, y_damp, z_damp, vx_damp, vy_damp, vz_damp]),
                                                             NumSecularPeriod,
+                                                            True,
                                                             True)
         return CoolingTime, FinalTemperature
     

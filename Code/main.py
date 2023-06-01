@@ -18,10 +18,10 @@ Q = 2000
 CoolingMode = 'secular'
 #if __name__ == "__main__":
 
-wrfList = np.linspace(2 * np.pi * 5e9, 2 * np.pi * 15e9, 1)
+wradicalList = np.linspace(2 * np.pi * 0.5e9, 2 * np.pi * 1.5e9,1)
 CoolingTime = []
 FinalTemperature = []
-for wrf in wrfList:
+for wradical in wradicalList:
     print(CoolingMode + 'for wrf = 2pi*{:.2f}, wradical = 2pi*{:.2f}, waxial = 2pi*{:.2f} in {:.2f} us'.format(wrf/(2 * np.pi),wradical/(2 * np.pi), waxial/(2 * np.pi), TotalTime * 1e6))
     test = Particle.Sinlge_Electron_Cooling(Vec0,
                                             ParticleParameters={
@@ -50,8 +50,8 @@ for wrf in wrfList:
 
 # save data
 #np.save(CoolingMode + 'wrf_changing, wradical=2pi*{:.2f},waxial=2pi*{:.2f} in {:.2f} us.txt'.format(wrf/(2 * np.pi),wradical/(2 * np.pi), waxial/(2 * np.pi), TotalTime * 1e6), CoolingTime)
-with open('Results, keep: Wrf.csv', 'w', newline='') as myfile:
+with open('Results, keep: Wradical.csv', 'w', newline='') as myfile:
      wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-     wr.writerow(wrfList)
+     wr.writerow(wradicalList)
      wr.writerow(CoolingTime)
      wr.writerow(FinalTemperature)
