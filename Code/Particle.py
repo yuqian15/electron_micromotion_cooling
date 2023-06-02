@@ -603,7 +603,7 @@ class Sinlge_Electron_Cooling(object):
         CoolingTime = t_damp[peaks[-1]]
         
         Energy = []
-        EquilibriumTime = 2
+        EquilibriumTime = 5
         print(EquilibriumTime * round(CoolingTime / dt))
         
         # we assume that after 4 cooling Time: e^-4, the motion is dominant by the noise
@@ -624,7 +624,7 @@ class Sinlge_Electron_Cooling(object):
         '''
         all direction of x, y, z energy(potential and kinetic energy), average over a waxial period
         '''
-        for i in SampleList:
+        for i in SampleList[:-1]:
             Energy_temp = 0
             for j in range(NumSecularPeriod):
                 Vec = x_damp[i + j], y_damp[i + j], z_damp[i + j], vx_damp[i + j], vy_damp[i + j], vz_damp[i + j]
@@ -641,11 +641,11 @@ class Sinlge_Electron_Cooling(object):
         plt.show()
 
         plt.clf()
-        Energy_n, Energy_bin_edges,_ = plt.hist(Energy, 1000, density=True, color='green', label = 'Histogram')
-        print(Energy_n)
-        print(Energy_bin_edges)
-        plt.title('Histogram for Energy')
-        plt.show()
+        Energy_n, Energy_bin_edges,_ = plt.hist(Energy, 10, density=True, color='green', label = 'Histogram')
+        #print(Energy_n)
+        #print(Energy_bin_edges)
+        #plt.title('Histogram for Energy')
+        #plt.show()
         xdata = 0.5*(Energy_bin_edges[1:] + Energy_bin_edges[:-1])
         ydata = Energy_n
 
@@ -661,7 +661,7 @@ class Sinlge_Electron_Cooling(object):
 
         
         if DrawEnergyHist:
-            #plt.plot(xdata, Energy_fitfunc(c, xdata), label = 'Fitting Curve')
+            plt.plot(xdata, Energy_fitfunc(c, xdata), label = 'Fitting Curve')
             plt.plot(xdata, ydata, label = 'raw data')
             
             FileName = 'Histogram for Energy'
@@ -678,13 +678,14 @@ class Sinlge_Electron_Cooling(object):
         '''
         just by velocity distribution
         '''
+        
         Velocity_fitfunc  = lambda p, x: p[0]*np.exp(- 0.5 * ((x-p[1])/p[2]) ** 2)+p[3]
         Velocity_errfunc  = lambda p, x, y: (y - Velocity_fitfunc(p, x))
        
         plt.clf()
         Velocity_n, Velocity_bin_edges,_ = plt.hist(vx_damp, 60, density=True, color='green', alpha=0.75)
-        plt.title('Histogram for velocity')
-        plt.show()
+        #plt.title('Histogram for velocity')
+        #plt.show()
         xdata = 0.5*(Velocity_bin_edges[1:] + Velocity_bin_edges[:-1])
         ydata = Velocity_n
 
@@ -698,7 +699,7 @@ class Sinlge_Electron_Cooling(object):
         print("Fit Coefficients:")
         print(c[0],c[1],abs(c[2]),c[3])
         if DrawVelocityHist:
-            #plt.plot(xdata, Velocity_fitfunc(c, xdata))
+            plt.plot(xdata, Velocity_fitfunc(c, xdata))
             plt.plot(xdata, ydata)
             plt.title(r'$A = %.3f\  \mu = %.3f\  \sigma = %.3f\ k = %.3f $' %(c[0],c[1],abs(c[2]),c[3]))
             
@@ -710,6 +711,37 @@ class Sinlge_Electron_Cooling(object):
         
         FinalTemperature = c[2]
         
+        vx_damp_square = [a ** 2 for a in vx_damp]
+
+        Velocity_Square_fitfunc  = lambda p, x: p[0]*np.exp(- 0.5 * ((x-p[1])/p[2]))+p[3]
+        Velocity_Square_errfunc  = lambda p, x, y: (y - Velocity_Square_fitfunc(p, x))
+       
+        plt.clf()
+        Velocity_Square_n, Velocity_Square_bin_edges,_ = plt.hist(vx_damp_square, 60, density=True, color='green', alpha=0.75)
+        #plt.title('Histogram for velocity')
+        #plt.show()
+        xdata = 0.5*(Velocity_Square_bin_edges[1:] + Velocity_Square_bin_edges[:-1])
+        ydata = Velocity_Square_n
+
+        init  = [1.0, 0.5, 0.5, 0.5]
+
+        out   = leastsq( Velocity_Square_errfunc, init, args=(xdata, ydata))
+        c     = out[0]
+
+        print("A exp[-0.5(x-mu)/sigma)] + k ")
+       
+        print("Fit Coefficients:")
+        print(c[0],c[1],abs(c[2]),c[3])
+        if DrawVelocityHist:
+            plt.plot(xdata, Velocity_Square_fitfunc(c, xdata))
+            plt.plot(xdata, ydata)
+            plt.title(r'$A = %.3f\  \mu = %.3f\  \sigma = %.3f\ k = %.3f $' %(c[0],c[1],abs(c[2]),c[3]))
+            
+            FileName = 'Histogram for Velocity Square'
+            plt.savefig('figures/' + FileName + '.png')
+            plt.show()
+        else:
+            plt.show(block = False)
        
         return CoolingTime, FinalTemperature
     
