@@ -11,14 +11,14 @@ waxial = 2 * np.pi * 300e6 # 300 MHz
 deff = 200e-6 # 200 micron
 m = 9.10938297e-31 # 9.10938297e-31 kg 
 q = 1.6e-19 # 1.6e-19 C
-TotalTime = 10e-6
+TotalTime = 20e-6
 Rp = 5e6
 Q = 2000
 
-CoolingMode = 'secular'
+CoolingMode = 'blue'
 #if __name__ == "__main__":
 
-wradicalList = np.linspace(2 * np.pi * 0.5e9, 2 * np.pi * 1.5e9,1)
+wradicalList = np.linspace(2 * np.pi * 0.5e9, 2 * np.pi * 1.5e9,10)
 CoolingTime = []
 FinalTemperature = []
 for wradical in wradicalList:

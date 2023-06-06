@@ -241,7 +241,7 @@ class Sinlge_Electron_Cooling(object):
         return vx, vy, vz, ax, ay, az
     
     def InitialRun(self, T_init, dt, DrawPosition = False, DrawSpectrum = False):
-        T_init = 2 * self.SimulationParameters['TotalTime']
+        T_init = 3 * self.SimulationParameters['TotalTime']
         if T_init < 10e-6:
             T_init = 10e-6
         N = round(T_init / dt)
@@ -460,8 +460,8 @@ class Sinlge_Electron_Cooling(object):
                   SaveData = False, 
                   SaveFig = True,
                   #FinalTemperature = True
-                  DrawVelocityHist = True,
-                  DrawEnergyHist = True
+                  DrawVelocityHist = False,
+                  DrawEnergyHist = False
                   ):
         
         T = self.SimulationParameters['TotalTime']
@@ -617,9 +617,6 @@ class Sinlge_Electron_Cooling(object):
 
         N = len(t_damp)
         SampleList = np.arange(0, N, NumSecularPeriod)
-        print(N)
-        print(NumSecularPeriod)
-        print(SampleList)  
         # we didn't use the pesudopotential approximation till now.
         '''
         all direction of x, y, z energy(potential and kinetic energy), average over a waxial period
@@ -631,14 +628,14 @@ class Sinlge_Electron_Cooling(object):
                 Energy_temp = Energy_temp + self.Vdc(Vec, t_damp[i + j]) + self.Vrf(Vec, t_damp[i + j]) + self.Ekin(Vec, t_damp[i + j])
 
             Energy.append(Energy_temp / NumSecularPeriod)
-        print(Energy)        
+        #print(Energy)        
         # best fit of Energy Hist
         Energy_fitfunc  = lambda p, x: p[0]*np.exp(- x/p[1])+p[2]
         Energy_errfunc  = lambda p, x, y: (y - Energy_fitfunc(p, x))
         plt.clf()
         plt.plot(Energy)
         plt.savefig('figures/' + 'time vs Energy' + '.png')
-        plt.show()
+        plt.show(block = False)
 
         plt.clf()
         Energy_n, Energy_bin_edges,_ = plt.hist(Energy, 10, density=True, color='green', label = 'Histogram')
@@ -709,11 +706,11 @@ class Sinlge_Electron_Cooling(object):
         else:
             plt.show(block = False)
         
-        FinalTemperature = c[2]
+        
         
         vx_damp_square = [a ** 2 for a in vx_damp]
 
-        Velocity_Square_fitfunc  = lambda p, x: p[0]*np.exp(- 0.5 * ((x-p[1])/p[2]))+p[3]
+        Velocity_Square_fitfunc  = lambda p, x: p[0]*np.exp(- (x-p[1])/p[2]) +p[3]
         Velocity_Square_errfunc  = lambda p, x, y: (y - Velocity_Square_fitfunc(p, x))
        
         plt.clf()
@@ -723,12 +720,16 @@ class Sinlge_Electron_Cooling(object):
         xdata = 0.5*(Velocity_Square_bin_edges[1:] + Velocity_Square_bin_edges[:-1])
         ydata = Velocity_Square_n
 
-        init  = [1.0, 0.5, 0.5, 0.5]
+        xdata = xdata * 0.5 * m / q
+        # turn the unit to be the kinetic energy (eV)
+        ydata = ydata 
+
+        init  = [1e-5, 0., 2e-6, 0. ]
 
         out   = leastsq( Velocity_Square_errfunc, init, args=(xdata, ydata))
         c     = out[0]
 
-        print("A exp[-0.5(x-mu)/sigma)] + k ")
+        print("A exp[- (x-mu)/sigma)] + k ")
        
         print("Fit Coefficients:")
         print(c[0],c[1],abs(c[2]),c[3])
@@ -742,7 +743,12 @@ class Sinlge_Electron_Cooling(object):
             plt.show()
         else:
             plt.show(block = False)
-       
+        
+        kB = 1.380649e-23 # Boltzman constant, given by Wikipedia
+        print('Final Temperature is {:.4f} K'.format(c[2] * q / kB))
+        
+        FinalTemperature = c[2] * q / kB
+
         return CoolingTime, FinalTemperature
     
 
