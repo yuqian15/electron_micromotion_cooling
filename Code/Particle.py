@@ -33,7 +33,7 @@ class Sinlge_Electron_Cooling(object):
                 After the parameterization by solving motion equation in the first order, V_{dc} and V_{rf} can be reexpressed as:
                 V_{dc} = \frac{1}{2} m \omega_z^2 \frac{2z^2 - x^2 - y^2}{2}
                 V_{rf} = \sqrt{2}m\omega_r \Omega_{rf}\cos(\Omega_{rf} t)\frac{x^2 - y^2}{2}
-                There are three parameters, including (\omega_z)"waxial":float, (\omega_r)"wradical":float, (\Omega_{rf})"wrf":float
+                There are three parameters, including (\omega_z)"waxial":float, (\omega_r)"wradial":float, (\Omega_{rf})"wrf":float
                 Note that all these are angular velocity frequency
             CircuitPrameters: dictionary
                 circuit parameters for the cooling process, the tank circuit is simplified as a RLC parallel circuit
@@ -63,7 +63,7 @@ class Sinlge_Electron_Cooling(object):
             # by default: charge of electron
             self.ParticleParameters['charge'] = 1.6e-19
 
-        # trap parameters: wrf & wradical & waxial & deff
+        # trap parameters: wrf & wradial & waxial & deff
 
         self.TrapParameters = {}
         if ('wrf') in TrapParameters:
@@ -72,11 +72,11 @@ class Sinlge_Electron_Cooling(object):
             # by default: 10 GHz
             self.TrapParameters['wrf'] = 2 * np.pi * 10e9 # 2pi for angular frequency
         
-        if ('wradical') in TrapParameters:
-            self.TrapParameters['wradical'] = TrapParameters['wradical']
+        if ('wradial') in TrapParameters:
+            self.TrapParameters['wradial'] = TrapParameters['wradial']
         else:
             # by default: 1GHz
-            self.TrapParameters['wradical'] = 2 * np.pi * 1e9 # 2pi for angular frequency
+            self.TrapParameters['wradial'] = 2 * np.pi * 1e9 # 2pi for angular frequency
         
         if ('waxial') in TrapParameters:
             self.TrapParameters['waxial'] = TrapParameters['waxial']
@@ -168,10 +168,10 @@ class Sinlge_Electron_Cooling(object):
         """
         q = self.ParticleParameters['charge']
         m = self.ParticleParameters['mass']
-        wradical = self.TrapParameters['wradical']
+        wradial = self.TrapParameters['wradial']
         wrf = self.TrapParameters['wrf']
         x, y, z, vx, vy, vz = Vec
-        return m * wradical * wrf * np.sqrt(2) / q * np.cos(wrf * t) * (x ** 2- y ** 2) /2
+        return m * wradial * wrf * np.sqrt(2) / q * np.cos(wrf * t) * (x ** 2- y ** 2) /2
 
     def Edc(self, Vec, t):
         """
@@ -206,10 +206,10 @@ class Sinlge_Electron_Cooling(object):
         """
         q = self.ParticleParameters['charge']
         m = self.ParticleParameters['mass']
-        wradical = self.TrapParameters['wradical']
+        wradial = self.TrapParameters['wradial']
         wrf = self.TrapParameters['wrf']
         x, y, z, vx, vy, vz = Vec
-        A = m * wradical * wrf * np.cos(wrf * t) * np.sqrt(2) / q
+        A = m * wradial * wrf * np.cos(wrf * t) * np.sqrt(2) / q
         return A * (- x), A * y, 0.
 
     # Calculate motional deviation according to Edc and Erf for initial Run
@@ -449,6 +449,35 @@ class Sinlge_Electron_Cooling(object):
         m = self.ParticleParameters['mass']
         x, y, z, vx, vy, vz = Vec
         return 0.5 * m * (vx ** 2 + vy ** 2 + vz ** 2)
+    
+    def Vdc_without_axial(self, Vec, t):
+        q = self.ParticleParameters['charge']
+        m = self.ParticleParameters['mass']
+        waxial = self.TrapParameters['waxial']
+        x, y, z, vx, vy, vz = Vec
+        return 1 /4/ q * m * waxial ** 2* ( - x ** 2 - y ** 2)
+
+    def Vrf_without_axial(self, Vec, t):
+        m = self.ParticleParameters['mass']
+        wradial = self.TrapParameters['wradial']
+        wrf = self.TrapParameters['wrf']
+        q = self.ParticleParameters['charge']
+        x, y, z, vx, vy, vz = Vec
+        return m * wradial * wrf * np.sqrt(2) / q * np.cos(wrf * t) * (x ** 2- y ** 2) /2
+    def Vps_without_axial(self, Vec, t):
+        q = self.ParticleParameters['charge']
+        m = self.ParticleParameters['mass']
+        wrf = self.TrapParameters['wrf']
+        x, y, z, vx, vy, vz = Vec
+        Ex, Ey, Ez = self.Erf(Vec, t)
+        return q ** 2 / 4 / m / wrf ** 2 * (Ex ** 2 + Ey ** 2)
+
+    # Calculte for the kinetic energy
+
+    def Ekin_without_axial(self, Vec, t):
+        m = self.ParticleParameters['mass']
+        x, y, z, vx, vy, vz = Vec
+        return 0.5 * m * (vx ** 2 + vy ** 2)
 
     def SecondRun(self, 
                   Damping_Ex_Ampl, 
@@ -460,8 +489,8 @@ class Sinlge_Electron_Cooling(object):
                   SaveData = False, 
                   SaveFig = True,
                   #FinalTemperature = True
-                  DrawVelocityHist = False,
-                  DrawEnergyHist = False
+                  DrawVelocityHist = True,
+                  DrawEnergyHist = True
                   ):
         
         T = self.SimulationParameters['TotalTime']
@@ -544,13 +573,13 @@ class Sinlge_Electron_Cooling(object):
         CoolingMode = self.SimulationParameters['CoolingMode']
         wrf = self.TrapParameters['wrf']
         waxial = self.TrapParameters['waxial']
-        wradical = self.TrapParameters['wradical']
+        wradial = self.TrapParameters['wradial']
 
 
         if DrawVelocity:
             plt.clf()
             plt.plot(np.array(t_damp[:len(x_damp) // 500 * 500])*1e6, vx_damp[:len(x_damp) // 500 * 500],\
-                    label = '$\Omega_rf$:{}GHz, $\omega_r$:{}GHz, $\omega_z$:{}MHz'.format(wrf/2/np.pi/1e9, wradical/2/np.pi/1e9, waxial/2/np.pi/1e6))
+                    label = '$\Omega_rf$:{}GHz, $\omega_r$:{}GHz, $\omega_z$:{}MHz'.format(wrf/2/np.pi/1e9, wradial/2/np.pi/1e9, waxial/2/np.pi/1e6))
             plt.plot(np.array(t_damp[:len(x_damp) // 500 * 500])*1e6, vx_abs_init / np.sqrt(e) * np.ones(len(x_damp))[:len(x_damp) // 500 * 500], 'r--', label = '$1/\sqrt{e}$')
             plt.plot(np.array(t_damp[:len(x_damp) // 500 * 500])*1e6, -vx_abs_init / np.sqrt(e) * np.ones(len(x_damp))[:len(x_damp) // 500 * 500], 'r--')
             plt.plot(np.array(t_damp[peaks[-1]])*1e6, vx_damp[peaks[-1]], "x")
@@ -578,14 +607,14 @@ class Sinlge_Electron_Cooling(object):
 
             plt.grid()
 
-            FileName = '{}_Wrf = {:.2f}_Wradical = {:.2f}_Waxial = {:.2f}_T = {:.2f}us'.format(CoolingMode, wrf, wradical, waxial, T * 1e6)
+            FileName = '{}_Wrf = {:.2f}_Wradial = {:.2f}_Waxial = {:.2f}_T = {:.2f}us'.format(CoolingMode, wrf, wradial, waxial, T * 1e6)
             if SaveFig:
                 plt.savefig('figures/' + FileName + '.png')
             plt.show(block=False)
             
         # Decide whether save data
         if SaveData:
-            FileName = '{}_Wrf = {:.2f}_Wradical = {:.2f}_Waxial = {:.2f}_T = {:.2f}us'.format(CoolingMode, wrf, wradical, waxial, T * 1e6)
+            FileName = '{}_Wrf = {:.2f}_Wradial = {:.2f}_Waxial = {:.2f}_T = {:.2f}us'.format(CoolingMode, wrf, wradial, waxial, T * 1e6)
             np.save('data/t_' + FileName, t_damp)
             np.save('data/x_' + FileName, x_damp)
             np.save('data/y_' + FileName, y_damp)
@@ -602,6 +631,46 @@ class Sinlge_Electron_Cooling(object):
 
         CoolingTime = t_damp[peaks[-1]]
         
+        # Define the pesudo-potential
+
+        Energy = []
+        N = len(t_damp)
+        SampleList = np.arange(0, N, 1 * NumSecularPeriod)
+        SampleList = SampleList[:-1]
+        # we didn't use the pesudopotential approximation till now.
+
+        # all direction of x, y energy(potential and kinetic energy), average over a waxial period
+
+        for i in SampleList:
+            Energy_temp = 0
+            for j in range(NumSecularPeriod):
+                Vec = x_damp[i + j], y_damp[i + j], z_damp[i + j], vx_damp[i + j], vy_damp[i + j], vz_damp[i + j]
+                Energy_temp = Energy_temp + \
+                              self.Vdc_without_axial(Vec, t_damp[i + j]) + \
+                              self.Vrf_without_axial(Vec, t_damp[i + j]) + \
+                              self.Ekin_without_axial(Vec, t_damp[i + j])
+
+            Energy.append(Energy_temp / NumSecularPeriod)
+
+        SampleList = SampleList * dt
+
+        Energy_fitfunc  = lambda p, x: p[0]*np.exp(- x/p[1])+p[2]
+        Energy_errfunc  = lambda p, x, y: (y - Energy_fitfunc(p, x))
+        init  = [1e-3, 0.243e-6, 0.5]
+        xdata = SampleList
+        ydata = Energy
+        out   = leastsq( Energy_errfunc, init, args=(xdata, ydata))
+        c = out[0]
+        plt.clf()
+        plt.plot(xdata, ydata, label = 'raw data', alpha = 0.5)
+        plt.plot(xdata, Energy_fitfunc(c, xdata), label = 'Fitting Curve')
+        
+        plt.title(r'$A = %.3f\ \sigma = %.8f\ k = %.3f $' %(c[0],abs(c[1]) * 1e6,c[2]))
+        plt.legend()
+        plt.show()
+
+        print('Cooling Time is: {:.3f} us'.format(abs(c[1]) * 1e6))
+
         Energy = []
         EquilibriumTime = 5
         print(EquilibriumTime * round(CoolingTime / dt))
@@ -617,15 +686,19 @@ class Sinlge_Electron_Cooling(object):
 
         N = len(t_damp)
         SampleList = np.arange(0, N, NumSecularPeriod)
+        SampleList = SampleList[:-1]
         # we didn't use the pesudopotential approximation till now.
         '''
         all direction of x, y, z energy(potential and kinetic energy), average over a waxial period
         '''
-        for i in SampleList[:-1]:
+        for i in SampleList:
             Energy_temp = 0
             for j in range(NumSecularPeriod):
                 Vec = x_damp[i + j], y_damp[i + j], z_damp[i + j], vx_damp[i + j], vy_damp[i + j], vz_damp[i + j]
-                Energy_temp = Energy_temp + self.Vdc(Vec, t_damp[i + j]) + self.Vrf(Vec, t_damp[i + j]) + self.Ekin(Vec, t_damp[i + j])
+                Energy_temp = Energy_temp + \
+                              self.Vdc_without_axial(Vec, t_damp[i + j]) + \
+                              self.Vrf_without_axial(Vec, t_damp[i + j]) + \
+                              self.Ekin_without_axial(Vec, t_damp[i + j])
 
             Energy.append(Energy_temp / NumSecularPeriod)
         #print(Energy)        
@@ -638,7 +711,7 @@ class Sinlge_Electron_Cooling(object):
         plt.show(block = False)
 
         plt.clf()
-        Energy_n, Energy_bin_edges,_ = plt.hist(Energy, 10, density=True, color='green', label = 'Histogram')
+        Energy_n, Energy_bin_edges,_ = plt.hist(Energy, 100, density=True, color='green', label = 'Histogram')
         #print(Energy_n)
         #print(Energy_bin_edges)
         #plt.title('Histogram for Energy')
