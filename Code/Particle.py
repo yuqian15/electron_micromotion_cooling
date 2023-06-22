@@ -519,7 +519,7 @@ class Sinlge_Electron_Cooling(object):
                                                                     phase, 
                                                                     progress_bar, 
                                                                     JNNoise_Ex, 
-                                                                    WithNoise = False), 
+                                                                    WithNoise = True), 
                             t_span = (0, T), 
                             y0 = Vec0, 
                             t_eval = t_eval, 
@@ -588,7 +588,7 @@ class Sinlge_Electron_Cooling(object):
            
             # Add estimated cooling time for secular cooling
             if CoolingMode == 'secular':
-                plt.plot(m * deff ** 2/ q ** 2/ Rp * 1e6 * np.ones(1000), np.linspace(-2e5, 2e5, 1000), '--', color = 'orange', label = 'Theory Secular Cooling Time')
+                plt.plot(m * deff ** 2 / q ** 2 / Rp * 1e6 *np.ones(1000), np.linspace(-2e5, 2e5, 1000), '--', color = 'orange', label = 'Theory Secular Cooling Time')
 
             # Add labels to the axes
             plt.xlabel('Time($\mu$s)')
@@ -627,14 +627,27 @@ class Sinlge_Electron_Cooling(object):
             print('Cooling Failed')
         else:
             print('Cooling Time is: {:.3f} us'.format(t_damp[peaks[-1]] * 1e6))
-        #clear
-
-        CoolingTime = t_damp[peaks[-1]]
         
-        # Define the pesudo-potential
+        # Using the velocity plot to get a raw cooling time
+        CoolingTime_raw = t_damp[peaks[-1]]
+        
+        # Using Curve fitting to get the exact cooling Time
+
+        EquilibriumTime = 5
+        #print(EquilibriumTime * round(CoolingTime_raw / dt))
+        
+        # we assume that after 5 cooling Time: e^-5, the motion is dominant by the noise
+        t_damping = t_damp[:EquilibriumTime * round(CoolingTime_raw / dt)]
+        x_damping = x_damp[:EquilibriumTime * round(CoolingTime_raw / dt)]
+        y_damping = y_damp[:EquilibriumTime * round(CoolingTime_raw / dt)]
+        z_damping = z_damp[:EquilibriumTime * round(CoolingTime_raw / dt)]
+        vx_damping = vx_damp[:EquilibriumTime * round(CoolingTime_raw / dt)]
+        vy_damping = vy_damp[:EquilibriumTime * round(CoolingTime_raw / dt)]
+        vz_damping = vz_damp[:EquilibriumTime * round(CoolingTime_raw / dt)]
+
 
         Energy = []
-        N = len(t_damp)
+        N = len(t_damping)
         SampleList = np.arange(0, N, 1 * NumSecularPeriod)
         SampleList = SampleList[:-1]
         # we didn't use the pesudopotential approximation till now.
@@ -644,11 +657,11 @@ class Sinlge_Electron_Cooling(object):
         for i in SampleList:
             Energy_temp = 0
             for j in range(NumSecularPeriod):
-                Vec = x_damp[i + j], y_damp[i + j], z_damp[i + j], vx_damp[i + j], vy_damp[i + j], vz_damp[i + j]
+                Vec = x_damping[i + j], y_damping[i + j], z_damping[i + j], vx_damping[i + j], vy_damping[i + j], vz_damping[i + j]
                 Energy_temp = Energy_temp + \
-                              self.Vdc_without_axial(Vec, t_damp[i + j]) + \
-                              self.Vrf_without_axial(Vec, t_damp[i + j]) + \
-                              self.Ekin_without_axial(Vec, t_damp[i + j])
+                              self.Vdc_without_axial(Vec, t_damping[i + j]) + \
+                              self.Vrf_without_axial(Vec, t_damping[i + j]) + \
+                              self.Ekin_without_axial(Vec, t_damping[i + j])
 
             Energy.append(Energy_temp / NumSecularPeriod)
 
@@ -670,21 +683,24 @@ class Sinlge_Electron_Cooling(object):
         plt.show()
 
         print('Cooling Time is: {:.3f} us'.format(abs(c[1]) * 1e6))
+        
+        # Exact Cooling Time
+        CoolingTime = abs(c[1])
 
         Energy = []
         EquilibriumTime = 5
-        print(EquilibriumTime * round(CoolingTime / dt))
+        #print(EquilibriumTime * round(CoolingTime_raw / dt))
         
-        # we assume that after 4 cooling Time: e^-4, the motion is dominant by the noise
-        t_damp = t_damp[EquilibriumTime * round(CoolingTime / dt):]
-        x_damp = x_damp[EquilibriumTime * round(CoolingTime / dt):]
-        y_damp = y_damp[EquilibriumTime * round(CoolingTime / dt):]
-        z_damp = z_damp[EquilibriumTime * round(CoolingTime / dt):]
-        vx_damp = vx_damp[EquilibriumTime * round(CoolingTime / dt):]
-        vy_damp = vy_damp[EquilibriumTime * round(CoolingTime / dt):]
-        vz_damp = vz_damp[EquilibriumTime * round(CoolingTime / dt):]
+        # we assume that after 5 cooling Time: e^-5, the motion is dominant by the noise
+        t_damped = t_damp[EquilibriumTime * round(CoolingTime_raw / dt):]
+        x_damped = x_damp[EquilibriumTime * round(CoolingTime_raw / dt):]
+        y_damped = y_damp[EquilibriumTime * round(CoolingTime_raw / dt):]
+        z_damped = z_damp[EquilibriumTime * round(CoolingTime_raw / dt):]
+        vx_damped = vx_damp[EquilibriumTime * round(CoolingTime_raw / dt):]
+        vy_damped = vy_damp[EquilibriumTime * round(CoolingTime_raw / dt):]
+        vz_damped = vz_damp[EquilibriumTime * round(CoolingTime_raw / dt):]
 
-        N = len(t_damp)
+        N = len(t_damped)
         SampleList = np.arange(0, N, NumSecularPeriod)
         SampleList = SampleList[:-1]
         # we didn't use the pesudopotential approximation till now.
@@ -694,16 +710,16 @@ class Sinlge_Electron_Cooling(object):
         for i in SampleList:
             Energy_temp = 0
             for j in range(NumSecularPeriod):
-                Vec = x_damp[i + j], y_damp[i + j], z_damp[i + j], vx_damp[i + j], vy_damp[i + j], vz_damp[i + j]
+                Vec = x_damped[i + j], y_damped[i + j], z_damped[i + j], vx_damped[i + j], vy_damped[i + j], vz_damped[i + j]
                 Energy_temp = Energy_temp + \
-                              self.Vdc_without_axial(Vec, t_damp[i + j]) + \
-                              self.Vrf_without_axial(Vec, t_damp[i + j]) + \
-                              self.Ekin_without_axial(Vec, t_damp[i + j])
+                              self.Vdc_without_axial(Vec, t_damped[i + j]) + \
+                              self.Vrf_without_axial(Vec, t_damped[i + j]) + \
+                              self.Ekin_without_axial(Vec, t_damped[i + j])
 
             Energy.append(Energy_temp / NumSecularPeriod)
         #print(Energy)        
         # best fit of Energy Hist
-        Energy_fitfunc  = lambda p, x: p[0]*np.exp(- x/p[1])+p[2]
+        Energy_fitfunc  = lambda p, x: p[0]*np.exp(- (x-p[1])/p[2])+p[3]
         Energy_errfunc  = lambda p, x, y: (y - Energy_fitfunc(p, x))
         plt.clf()
         plt.plot(Energy)
@@ -719,7 +735,7 @@ class Sinlge_Electron_Cooling(object):
         xdata = 0.5*(Energy_bin_edges[1:] + Energy_bin_edges[:-1])
         ydata = Energy_n
 
-        init  = [1.0, 0.5, 0.5]
+        init  = [1.0, 0.102, 0.5, 0.5]
 
         out   = leastsq( Energy_errfunc, init, args=(xdata, ydata))
         c = out[0]
@@ -727,22 +743,24 @@ class Sinlge_Electron_Cooling(object):
         print("A exp[-(x-mu)/sigma] + k ")
        
         print("Fit Coefficients:")
-        print(c[0],abs(c[1]),c[2])
+        print(c[0],c[1], abs(c[2]),c[3])
 
         
         if DrawEnergyHist:
             plt.plot(xdata, Energy_fitfunc(c, xdata), label = 'Fitting Curve')
             plt.plot(xdata, ydata, label = 'raw data')
             
-            FileName = 'Histogram for Energy'
-            plt.title(r'$A = %.3f\ \sigma = %.3f\ k = %.3f $' %(c[0],abs(c[1]),c[2]))
+            FileName = 'Histogram_for_Energy'
+            plt.title(r'$A = %.3f\mu = %.3f \sigma = %.3f\ k = %.3f $' %(c[0], c[1], abs(c[2]),c[3]))
             
             plt.savefig('figures/' + FileName + '.png')
             plt.show()
+            np.save('data/xdata_' + FileName, xdata)
+            np.save('data/ydata_' + FileName, ydata)
         else:
             plt.plot(xdata, Energy_fitfunc(c, xdata))
             plt.plot(xdata, ydata)
-            plt.title(r'$A = %.3f\ \sigma = %.3f\ k = %.3f $' %(c[0],abs(c[1]),c[2]))
+            plt.title(r'$A = %.3f\mu = %.3f \sigma = %.3f\ k = %.3f $' %(c[0], c[1], abs(c[2]),c[3]))
             plt.show(block = False)
         
         '''
@@ -759,7 +777,7 @@ class Sinlge_Electron_Cooling(object):
         xdata = 0.5*(Velocity_bin_edges[1:] + Velocity_bin_edges[:-1])
         ydata = Velocity_n
 
-        init  = [1.0, 0.5, 0.5, 0.5]
+        init  = [1.0, 0., 0.5, 0.5]
 
         out   = leastsq( Velocity_errfunc, init, args=(xdata, ydata))
         c     = out[0]
@@ -773,21 +791,23 @@ class Sinlge_Electron_Cooling(object):
             plt.plot(xdata, ydata)
             plt.title(r'$A = %.3f\  \mu = %.3f\  \sigma = %.3f\ k = %.3f $' %(c[0],c[1],abs(c[2]),c[3]))
             
-            FileName = 'Histogram for Velocity'
+            FileName = 'Histogram_for_Velocity'
             plt.savefig('figures/' + FileName + '.png')
             plt.show()
+            np.save('data/xdata_' + FileName, xdata)
+            np.save('data/ydata_' + FileName, ydata)
         else:
             plt.show(block = False)
         
         
         
-        vx_damp_square = [a ** 2 for a in vx_damp]
+        vx_damped_square = [a ** 2 for a in vx_damped]
 
         Velocity_Square_fitfunc  = lambda p, x: p[0]*np.exp(- (x-p[1])/p[2]) +p[3]
         Velocity_Square_errfunc  = lambda p, x, y: (y - Velocity_Square_fitfunc(p, x))
        
         plt.clf()
-        Velocity_Square_n, Velocity_Square_bin_edges,_ = plt.hist(vx_damp_square, 60, density=True, color='green', alpha=0.75)
+        Velocity_Square_n, Velocity_Square_bin_edges,_ = plt.hist(vx_damped_square, 60, density=True, color='green', alpha=0.75)
         #plt.title('Histogram for velocity')
         #plt.show()
         xdata = 0.5*(Velocity_Square_bin_edges[1:] + Velocity_Square_bin_edges[:-1])
@@ -811,9 +831,11 @@ class Sinlge_Electron_Cooling(object):
             plt.plot(xdata, ydata)
             plt.title(r'$A = %.3f\  \mu = %.3f\  \sigma = %.3f\ k = %.3f $' %(c[0],c[1],abs(c[2]),c[3]))
             
-            FileName = 'Histogram for Velocity Square'
+            FileName = 'Histogram_for_Velocity_Square'
             plt.savefig('figures/' + FileName + '.png')
             plt.show()
+            np.save('data/xdata_' + FileName, xdata)
+            np.save('data/ydata_' + FileName, ydata)
         else:
             plt.show(block = False)
         
