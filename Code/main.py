@@ -11,7 +11,7 @@ waxial = 2 * np.pi * 300e6 # 300 MHz
 deff = 200e-6 # 200 micron
 m = 9.10938297e-31 # 9.10938297e-31 kg 
 q = 1.6e-19 # 1.6e-19 C
-TotalTime = 20e-6
+TotalTime = 30e-6
 Rp = 5e6
 Q = 2000
 
