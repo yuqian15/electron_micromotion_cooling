@@ -727,7 +727,7 @@ class Sinlge_Electron_Cooling(object):
         plt.show(block = False)
 
         plt.clf()
-        Energy_n, Energy_bin_edges,_ = plt.hist(Energy, 100, density=True, color='green', label = 'Histogram')
+        Energy_n, Energy_bin_edges,_ = plt.hist(Energy, density=True, color='green', label = 'Histogram')
         #print(Energy_n)
         #print(Energy_bin_edges)
         #plt.title('Histogram for Energy')
@@ -735,6 +735,13 @@ class Sinlge_Electron_Cooling(object):
         xdata = 0.5*(Energy_bin_edges[1:] + Energy_bin_edges[:-1])
         ydata = Energy_n
 
+        # rescale the plot to achieve a better fitting
+        xrescale = 10
+        yrescale = 0.1
+        
+        xdata = xdata * xrescale
+        ydata = ydata * yrescale
+        
         init  = [1.0, 0.102, 0.5, 0.5]
 
         out   = leastsq( Energy_errfunc, init, args=(xdata, ydata))
@@ -749,17 +756,22 @@ class Sinlge_Electron_Cooling(object):
         if DrawEnergyHist:
             plt.plot(xdata, Energy_fitfunc(c, xdata), label = 'Fitting Curve')
             plt.plot(xdata, ydata, label = 'raw data')
-            
+            plt.legend()
+            plt.xlabel('energy*0.1J')
+            plt.ylabel('probability*10')
             FileName = 'Histogram_for_Energy'
             plt.title(r'$A = %.3f\mu = %.3f \sigma = %.3f\ k = %.3f $' %(c[0], c[1], abs(c[2]),c[3]))
             
             plt.savefig('figures/' + FileName + '.png')
-            plt.show()
+            plt.show(block = False)
             np.save('data/xdata_' + FileName, xdata)
             np.save('data/ydata_' + FileName, ydata)
         else:
-            plt.plot(xdata, Energy_fitfunc(c, xdata))
-            plt.plot(xdata, ydata)
+            plt.plot(xdata, Energy_fitfunc(c, xdata), label = 'Fitting Curve')
+            plt.plot(xdata, ydata, label = 'raw data')
+            plt.legend()
+            plt.xlabel('energy*0.1J')
+            plt.ylabel('probability*10')
             plt.title(r'$A = %.3f\mu = %.3f \sigma = %.3f\ k = %.3f $' %(c[0], c[1], abs(c[2]),c[3]))
             plt.show(block = False)
         
@@ -771,12 +783,18 @@ class Sinlge_Electron_Cooling(object):
         Velocity_errfunc  = lambda p, x, y: (y - Velocity_fitfunc(p, x))
        
         plt.clf()
-        Velocity_n, Velocity_bin_edges,_ = plt.hist(vx_damp, 60, density=True, color='green', alpha=0.75)
+        Velocity_n, Velocity_bin_edges,_ = plt.hist(vx_damp, density=True, color='green', alpha=0.75)
         #plt.title('Histogram for velocity')
         #plt.show()
         xdata = 0.5*(Velocity_bin_edges[1:] + Velocity_bin_edges[:-1])
         ydata = Velocity_n
 
+        # rescale the data to get a better fitting
+        xrescale = 0.001
+        yrescale = 1000
+        xdata = xdata * xrescale
+        ydata = ydata * yrescale
+        
         init  = [1.0, 0., 0.5, 0.5]
 
         out   = leastsq( Velocity_errfunc, init, args=(xdata, ydata))
@@ -787,35 +805,47 @@ class Sinlge_Electron_Cooling(object):
         print("Fit Coefficients:")
         print(c[0],c[1],abs(c[2]),c[3])
         if DrawVelocityHist:
-            plt.plot(xdata, Velocity_fitfunc(c, xdata))
-            plt.plot(xdata, ydata)
+            plt.plot(xdata, Velocity_fitfunc(c, xdata), label = 'Fitting Curve')
+            plt.plot(xdata, ydata, label = 'raw histgram')
+            plt.legend()
+            plt.xlabel('Velocity * 1000 (m/s)')
+            plt.ylabel('probability * 1e-3')
             plt.title(r'$A = %.3f\  \mu = %.3f\  \sigma = %.3f\ k = %.3f $' %(c[0],c[1],abs(c[2]),c[3]))
             
             FileName = 'Histogram_for_Velocity'
             plt.savefig('figures/' + FileName + '.png')
-            plt.show()
+            plt.show(block = False)
             np.save('data/xdata_' + FileName, xdata)
             np.save('data/ydata_' + FileName, ydata)
         else:
+            plt.plot(xdata, Velocity_fitfunc(c, xdata), label = 'Fitting Curve')
+            plt.plot(xdata, ydata, label = 'raw histgram')
+            plt.legend()
+            plt.xlabel('Velocity * 1000 (m/s)')
+            plt.ylabel('probability * 1e-3')
+            plt.title(r'$A = %.3f\  \mu = %.3f\  \sigma = %.3f\ k = %.3f $' %(c[0],c[1],abs(c[2]),c[3]))
+            
             plt.show(block = False)
+            plt.show(block = False)
+        kB = 1.380649e-23 # Boltzman constant, given by Wikipedia
+        print('By velocity distribution, the final Temperature is {:.4f} K'.format(c[2] / xrescale * m / kB))
         
-        
-        
-        vx_damped_square = [a ** 2 for a in vx_damped]
+        # turn the unit to be the kinetic energy (eV)
+        vx_damped_square =[a ** 2  * 0.5 * m / q for a in vx_damped]
 
         Velocity_Square_fitfunc  = lambda p, x: p[0]*np.exp(- (x-p[1])/p[2]) +p[3]
         Velocity_Square_errfunc  = lambda p, x, y: (y - Velocity_Square_fitfunc(p, x))
        
         plt.clf()
-        Velocity_Square_n, Velocity_Square_bin_edges,_ = plt.hist(vx_damped_square, 60, density=True, color='green', alpha=0.75)
+        Velocity_Square_n, Velocity_Square_bin_edges,_ = plt.hist(vx_damped_square, density=True, color='green', alpha=0.75)
         #plt.title('Histogram for velocity')
         #plt.show()
         xdata = 0.5*(Velocity_Square_bin_edges[1:] + Velocity_Square_bin_edges[:-1])
         ydata = Velocity_Square_n
 
-        xdata = xdata * 0.5 * m / q
-        # turn the unit to be the kinetic energy (eV)
-        ydata = ydata 
+        xdata = xdata * 1000
+       
+        ydata = ydata * 1e9
 
         init  = [1e-5, 0., 2e-6, 0. ]
 
@@ -827,22 +857,28 @@ class Sinlge_Electron_Cooling(object):
         print("Fit Coefficients:")
         print(c[0],c[1],abs(c[2]),c[3])
         if DrawVelocityHist:
-            plt.plot(xdata, Velocity_Square_fitfunc(c, xdata))
-            plt.plot(xdata, ydata)
+            plt.plot(xdata, Velocity_Square_fitfunc(c, xdata), label = 'Fitting Curve')
+            plt.plot(xdata, ydata, label = 'raw data')
+            plt.xlabel('Kinetic Energy/meV')
+            plt.ylabel('Probability * 1e-9')
             plt.title(r'$A = %.3f\  \mu = %.3f\  \sigma = %.3f\ k = %.3f $' %(c[0],c[1],abs(c[2]),c[3]))
             
             FileName = 'Histogram_for_Velocity_Square'
             plt.savefig('figures/' + FileName + '.png')
-            plt.show()
+            plt.show(block = False)
             np.save('data/xdata_' + FileName, xdata)
             np.save('data/ydata_' + FileName, ydata)
         else:
+            plt.plot(xdata, Velocity_Square_fitfunc(c, xdata), label = 'Fitting Curve')
+            plt.plot(xdata, ydata, label = 'raw data')
+            plt.xlabel('Kinetic Energy/meV')
+            plt.ylabel('Probability * 1e-9')
             plt.show(block = False)
         
         kB = 1.380649e-23 # Boltzman constant, given by Wikipedia
-        print('Final Temperature is {:.4f} K'.format(c[2] * q / kB))
+        print('By kinetic energy distribution, the final Temperature is {:.4f} K'.format(c[2]/xrescale * q / kB))
         
-        FinalTemperature = c[2] * q / kB
+        FinalTemperature = c[2] * q / kB / xrescale
 
         return CoolingTime, FinalTemperature
     
