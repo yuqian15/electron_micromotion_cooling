@@ -1202,7 +1202,7 @@ class Sinlge_Electron_Cooling(object):
             ratio = 0.3'''
        
         #JNNoise_Ex = noise_on_trap_V2(deff, Temperature, Rp, fres, QualityFactor, T, dt, ratio)
-        WithNoise = True
+        WithNoise = False
         print('WithNoise = ', WithNoise)
         # Using RK45 to solve the ODE
         solution = solve_ivp(fun=lambda t, Vec: self.DevMotion_para(t, 
