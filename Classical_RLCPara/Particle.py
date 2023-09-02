@@ -405,7 +405,7 @@ class Sinlge_Electron_Cooling(object):
             - NumSecularPeriod: integer
                 the number of the time steps in a radial direction secular motion period
         """
-        T_init = 2 * self.SimulationParameters['TotalTime']
+        T_init = 3 * self.SimulationParameters['TotalTime']
         dt = self.SimulationParameters['dt']
         Q = self.CircuitParameters['QualityFactor']
         C = self.CircuitParameters['C']
