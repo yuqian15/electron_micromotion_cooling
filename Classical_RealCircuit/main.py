@@ -32,8 +32,8 @@ Aim = 'CoolingTime_FinalTemperature'
 
 #if __name__ == "__main__":
 
-wradialList = np.linspace(2 * np.pi * 1.5e9, 2 * np.pi * 2.5e9, 10)
-#wradialList = wradial * np.ones(1)
+#wradialList = np.linspace(2 * np.pi * 1.5e9, 2 * np.pi * 2.5e9, 10)
+wradialList = wradial * np.ones(1)
 wrfList = np.linspace(2 * np.pi * 8e9, 2 * np.pi * 12e9, 10)
 #wradialList = wradial * np.ones(10)
 #wrfList = np.linspace(2 * np.pi * 5e9, 2 * np.pi * 15e9, 1)

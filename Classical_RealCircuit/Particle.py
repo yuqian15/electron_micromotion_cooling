@@ -282,6 +282,20 @@ class Sinlge_Electron_Cooling(object):
 
     def InitialSimulation(self, DrawPosition = False, DrawSpectrum = False):
         """
+        Aim of the Initial simulation is to get the 
+
+        Params
+        -----------
+        DrawPostition: Boolean
+        DrawSpectrum: Boolean
+
+        Outputs
+        -----------
+        fres: float 
+            tank circuit(resoant circuit) resonant frequency
+        NumSecularPeriod
+
+
         """
         T_init = self.SimulationParameters['TotalTime']
         dt = self.SimulationParameters['dt']
@@ -548,6 +562,20 @@ class Sinlge_Electron_Cooling(object):
                   DrawEnergyHist = True):
         """
         Another method to simulate, by solving the equation of motion and the circuit 
+
+        Params
+        ---------
+        fres: float
+        NumSecularPeriod: int
+        DrawPosition: bool
+        DrawVelocity: bool
+        SaveData: bool
+        DrawVelocityHist: bool
+        DrawEnergyHist: bool
+
+        Output:
+        ----------
+
         """
         # loading the Parameters from self
         q = self.ParticleParameters['charge']
@@ -777,7 +805,7 @@ class Sinlge_Electron_Cooling(object):
         
         '''
         #by velocity square
-    '''
+        '''
         vx_damped_square = [a ** 2  * 0.5 * m / q * 1000 for a in vx_damped]
         # turn the unit to be the kinetic energy (eV)
 
@@ -823,462 +851,7 @@ class Sinlge_Electron_Cooling(object):
         FinalTemperature = c[2] * q / kB / 1000
 
         return CoolingTime, FinalTemperature
-        
-    def SecondRun(self, 
-                  Damping_Ex_Ampl, 
-                  fres, 
-                  phase, 
-                  NumSecularPeriod,
-                  DrawPosition = True, 
-                  DrawVelocity = True, 
-                  SaveData = False, 
-                  DrawVelocityHist = True,
-                  DrawEnergyHist = True
-                  ):
-        """
-        Second Run with noise & damping circuit; The aim of the second simulation is to get the 
-
-            1. cooling time;
-            2. final temperature;
-            There are generally two ways to get the cooling time:
-                1.1: looking at the velocity plot and finding the place where v_damped = v_init / sqrt(e); the critical time is roughly the Cooling time(CoolingTime_raw)
-                1.2: calculate the energy without axial direciton(kinetic energy + potential energy) at doing a curve fitting
-            There are generally two ways to get the final temperature:
-                2.1: when fitting the enrgy curve(time VS energy), the energy offset in the y direction(energy) corresponds to the final temperature
-                2.2: after enough time when the cooling ends, the rest motion is dominated by the noise only; By doing satistics and histogram fitting, the enrgy(kinetic energy) obeys 1D Maxwell-Boltzmann distribution
-
-        Param
-        -------
-            - Damping_Ex_Ampl 'float'
-                got from the initial simulation, damping force electric field amplitude, got from initial simulation, used for damping force
-            - fres: 'float'
-                got from the initial simulation, resonator frequncy, used for damping force
-            - phase: float
-                got from the initial simulation, initial phase in the damping force list, got from initial simulation, used for damping force
-            - NumSecularPeriod: integer
-                got from the first simulation, used for calculation for the average energy during one secular period
-            - DrawPosition: boolean
-                determine whether draw & save the time VS position plot or not
-            - DrawVelocity: boolean
-                determine whether draw & save the time VS velocity plot or not  
-            - SaveData: boolean
-                determine whether save the data(x, y, z, vx, vy, vz) during the simulation or not
-            - DrawVelocityHist: boolean
-                determine whether save the Velocity distribution plot and data in x direction
-            - DrawEnergyHist: boolean
-                determine whether save the energy distribution plot and data
-        
-        Output
-        -----
-            - Damping_Ex_Ampl: float
-                Damping Force Amplitude(The maximum damping force)
-            - fres: float
-                resonator frequency, which is determined by cooling mode and the motional spectrum
-            - phase: float, in [0, 2Pi]
-                initial phase in the damping force list
-            - NumSecularPeriod: integer
-                the number of the time steps in a radial direction secular motion period
-        """
-        Aim = self.SimulationParameters['Aim']
-
-        T = self.SimulationParameters['TotalTime']
-        dt = self.SimulationParameters['dt']
-        CoolingMode = self.SimulationParameters['CoolingMode']
-        N = int(np.round(T / dt))
-        Vec0 = self.Vec0 + self.Vec0
-        progress_bar = tqdm(total=T, desc='Simulation for Second Run with {:.2f} us'.format(T * 1e6), position=0, leave=True)
-        
-        # generating the time list
-        t_eval = np.linspace(0, T, N + 1)
-
-        # Generate the noise List in advance
-        deff = self.TrapParameters['deff']
-        Temperature = self.CircuitParameters['Temperature']
-        Rp = self.CircuitParameters['Rp']
-        QualityFactor = self.CircuitParameters['QualityFactor']
-        
-        kB = 1.380649e-23 # Boltzman constant, given by Wikipedias
-        # Call the function "noise_on_trap" to get a Johnson Nyquist noise electric field list
-        # Noise Model Version 1: White Noise with Filter, RLC parallel cirucit
-        JNNoise_Ex = noise_on_trap_FDT(deff, Temperature, Rp, fres, QualityFactor, T, dt)
-        
-        # Noise Model Version 2: Purely White Noise, but with spectrum amplitude suppressed
-        '''
-        if CoolingMode == 'secular':
-            ratio = 0.4
-        elif CoolingMode == 'blue':
-            ratio = 0.3
-        else:
-            ratio = 0.3'''
-       
-        #JNNoise_Ex = noise_on_trap_V2(deff, Temperature, Rp, fres, QualityFactor, T, dt, ratio)
-        WithNoise = False
-        print('WithNoise = ', WithNoise)
-        # Using RK45 to solve the ODE
-        solution = solve_ivp(fun=lambda t, Vec: self.DevMotion_para(t, 
-                                                                    Vec, 
-                                                                    Damping_Ex_Ampl, 
-                                                                    fres, 
-                                                                    phase, 
-                                                                    progress_bar, 
-                                                                    JNNoise_Ex, 
-                                                                    WithNoise = WithNoise), 
-                            t_span = (0, T), 
-                            y0 = Vec0, 
-                            t_eval = t_eval, 
-                            first_step = dt,
-                            max_step = dt,
-                            atol = 1e-1,
-                            rtol = 1e-1,
-                            method = 'RK45')
-
-        t_damp = solution.t
-        VecResult = solution.y
-
-        x_damp, y_damp, z_damp = VecResult[6, :], VecResult[7, :], VecResult[8, :]
-        vx_damp, vy_damp, vz_damp = VecResult[9, :], VecResult[10, :], VecResult[11, :]
-
-
-        progress_bar.close()
-
-
-        if DrawPosition:
-            plt.clf()
-            # Plot the x-axis motion
-            fig1, ax = plt.subplots(1,2)
-
-            # Plot the data on the axes
-            ax[0].plot(np.array(t_eval[:len(x_damp) // 500 * 500])*1e6, x_damp[:len(x_damp) // 500 * 500])
-            #ax[0].plot(np.array(t_eval[:len(x_damp)])*1e6, x_damp[:len(x_damp)])
-
-            # Add labels to the axes
-            ax[0].set_xlabel('t($\mu$s)')
-            ax[0].set_ylabel('x(t)')
-
-            # Plot the data on the axes
-            Zoomnum = round(0.02e-6/dt)
-            ax[1].plot(np.array(t_eval[:Zoomnum // 1 * 1])*1e6, x_damp[:Zoomnum])
-
-            # Add labels to the axes
-            ax[1].set_xlabel('t($\mu$s)')
-            ax[1].set_ylabel('x(t)')
-
-            plt.grid()
-            # Show the plot
-            plt.show(block=False)
-        
-        # Based on the velocity plot, find the cooling time
-        vx_abs_init = (np.abs(np.max(vx_damp)) + np.abs(np.min(vx_damp))) / 2
-        e = np.exp(1)
-
-        peaks, heights = find_peaks(vx_damp, height= vx_abs_init/ np.sqrt(e))
-
-        m = self.ParticleParameters['mass']
-        q = self.ParticleParameters['charge']
-        CoolingMode = self.SimulationParameters['CoolingMode']
-        wrf = self.TrapParameters['wrf']
-        waxial = self.TrapParameters['waxial']
-        wradial = self.TrapParameters['wradial']
-
-
-        if DrawVelocity:
-            plt.clf()
-            plt.plot(np.array(t_damp[:len(x_damp) // 500 * 500])*1e6, vx_damp[:len(x_damp) // 500 * 500],\
-                    label = '$\Omega_rf$:{}GHz, $\omega_r$:{}GHz, $\omega_z$:{}MHz'.format(wrf/2/np.pi/1e9, wradial/2/np.pi/1e9, waxial/2/np.pi/1e6))
-            plt.plot(np.array(t_damp[:len(x_damp) // 500 * 500])*1e6, vx_abs_init / np.sqrt(e) * np.ones(len(x_damp))[:len(x_damp) // 500 * 500], 'r--', label = '$1/\sqrt{e}$')
-            plt.plot(np.array(t_damp[:len(x_damp) // 500 * 500])*1e6, -vx_abs_init / np.sqrt(e) * np.ones(len(x_damp))[:len(x_damp) // 500 * 500], 'r--')
-            plt.plot(np.array(t_damp[peaks[-1]])*1e6, vx_damp[peaks[-1]], "x")
-            plt.text(np.array(t_damp[peaks[-1]])*1e6, vx_damp[peaks[-1]], "%.2f $\mu$s" % (float(t_damp[peaks[-1]]) * 1e6))
-            #ax[0].plot(np.array(t_eval[:len(x_damp)])*1e6, x_damp[:len(x_damp)])
-           
-            # Add estimated cooling time for secular cooling
-            if CoolingMode == 'secular':
-                plt.plot(m * deff ** 2 / q ** 2 / Rp * 1e6 *np.ones(1000), np.linspace(-2e5, 2e5, 1000), '--', color = 'orange', label = 'Theory Secular Cooling Time')
-
-            # Add labels to the axes
-            plt.xlabel('Time/$\mu$s')
-            plt.ylabel('$v_x$')
-            plt.legend()
-            plt.grid()
-            plt.ylim([-2e5, 2e5])
-            plt.title('fres = {:.2f} GHz, Rp {:.1f} M$\Omega$'.format(fres / 1e9, Rp/1e6))
-            Zoomnum = round(0.2e-6/dt)
-            x_zoom = np.array(t_eval[:Zoomnum // 1 * 1])*1e6
-            y_zoom = vx_damp[:Zoomnum]
-            axes = plt.axes([.50, .2, .23, .2])
-            axes.plot(x_zoom, y_zoom, color='blue', lw=1, label='Zoomed curve')
-            axes.set_xlabel('$\mu$s')
-            #axes.legend(‘right’)
-
-            plt.grid()
-
-            FileName = '{}_Wrf=2PI{:.2f}GHz_Wradial=2PI{:.2f}GHz_Waxial=2PI{:.2f}MHz_T={:.2f}us'.format(CoolingMode, wrf / 2 / np.pi / 1e9, wradial / 2 / np.pi / 1e9, waxial / 2 / np.pi / 1e6, T * 1e6)
-            
-            plt.savefig('figures/' + FileName + '.png')
-            plt.show(block=False)
-            
-        # save the _damp
-        if SaveData:
-            FileName = '{}_Wrf=2PI{:.2f}GHz_Wradial=2PI{:.2f}GHz_Waxial=2PI{:.2f}MHz_T={:.2f}us'.format(CoolingMode, wrf / 2 / np.pi / 1e9, wradial / 2 / np.pi / 1e9, waxial / 2 / np.pi / 1e6, T * 1e6)
-            np.savez('data/damp_' + FileName, t = t_damp, x = x_damp, vx = vx_damp)
-        
-
-        # if the aim is coolingtime/ CoolingTime_FinalTemperature, then we
-        # 1.  extract the _damping from _damp
-        # 2.  get the Coolingtime_rough for later fitting
-        if Aim == 'CoolingTime_FinalTemperature':
-            if t_damp[peaks[-1]] / T > 0.9:
-                print('Cooling Failed')
-                if CoolingMode == 'secular':
-                    CoolingTime_rough = m * deff ** 2 / q ** 2 / Rp 
-                elif CoolingMode == 'blue':
-                    CoolingTime_rough = np.sqrt(2) * wrf / wradial * m * deff ** 2 / q ** 2 / Rp
-            else:
-                print('By velocity plot, the cooling Time is: {:.3f} us'.format(t_damp[peaks[-1]] * 1e6))
-                # Using the velocity plot to get a raw cooling time
-                CoolingTime_rough = t_damp[peaks[-1]]
-        
-            # based on some tests, if the it's secular cooling, then after
-            if CoolingMode == 'secular':
-                EquilibriumTime = 5
-            elif CoolingMode == 'blue':
-                EquilibriumTime = 7
-            else:
-                EquilibriumTime = 5
-            
-            # we assume that after 5 cooling Time: e^-5, the motion is dominant by the noise
-            t_damping = t_damp[:EquilibriumTime * round(CoolingTime_rough / dt)]
-            x_damping = x_damp[:EquilibriumTime * round(CoolingTime_rough / dt)]
-            y_damping = y_damp[:EquilibriumTime * round(CoolingTime_rough / dt)]
-            z_damping = z_damp[:EquilibriumTime * round(CoolingTime_rough / dt)]
-            vx_damping = vx_damp[:EquilibriumTime * round(CoolingTime_rough / dt)]
-            vy_damping = vy_damp[:EquilibriumTime * round(CoolingTime_rough / dt)]
-            vz_damping = vz_damp[:EquilibriumTime * round(CoolingTime_rough / dt)]
-            # save the _damping
-            if SaveData:
-                FileName = '{}_Wrf=2PI{:.2f}GHz_Wradial=2PI{:.2f}GHz_Waxial=2PI{:.2f}MHz_T={:.2f}us'.format(CoolingMode, wrf / 2 / np.pi / 1e9, wradial / 2 / np.pi / 1e9, waxial / 2 / np.pi / 1e6, T * 1e6)
-                np.savez('data/damping_' + FileName, t = t_damping, x = x_damping, vx = vx_damping)
-        
-        elif Aim == 'CoolingTime':
-            t_damping = t_damp
-            x_damping = x_damp
-            y_damping = y_damp
-            z_damping = z_damp
-            vx_damping = vx_damp
-            vy_damping = vy_damp
-            vz_damping = vz_damp
-            if CoolingMode == 'secular':
-                CoolingTime_rough = m * deff ** 2 / q ** 2 / Rp 
-            elif CoolingMode == 'blue':
-                CoolingTime_rough = np.sqrt(2) * wrf / wradial * m * deff ** 2 / q ** 2 / Rp
-        
-            # save the _damping
-            if SaveData:
-                FileName = '{}_Wrf=2PI{:.2f}GHz_Wradial=2PI{:.2f}GHz_Waxial=2PI{:.2f}MHz_T={:.2f}us'.format(CoolingMode, wrf / 2 / np.pi / 1e9, wradial / 2 / np.pi / 1e9, waxial / 2 / np.pi / 1e6, T * 1e6)
-                np.savez('data/damping_' + FileName, t = t_damping, x = x_damping, vx = vx_damping)
-
-        # if the aim = coolingtime/coolingtime_finaltemperature, then use energy fitting to get the cooing time
-        if Aim != 'FinalTemperature':
-   
-            # Using Curve fitting to get the exact cooling Time
-            
-            Energy = []
-            N = len(t_damping)
-            SampleList = np.arange(0, N, 1 * NumSecularPeriod)
-            SampleList = SampleList[:-1]
-
-            # all direction of x, y energy(potential and kinetic energy), average over a waxial period
-
-            for i in SampleList:
-                Energy_temp = 0
-                for j in range(NumSecularPeriod):
-                    Vec = x_damping[i + j], y_damping[i + j], z_damping[i + j], vx_damping[i + j], vy_damping[i + j], vz_damping[i + j]
-                    Energy_temp = Energy_temp + \
-                                self.Udc_without_axial(Vec, t_damping[i + j]) + \
-                                self.Urf_without_axial(Vec, t_damping[i + j]) + \
-                                self.Ekin_without_axial(Vec, t_damping[i + j])
-                # turn the energy unit to be J/kB
-                Energy.append(Energy_temp/ kB / NumSecularPeriod)
-
-            SampleList = SampleList * dt
-
-            Energy_fitfunc  = lambda p, x: p[0]*np.exp(- x/p[1])+p[2]
-            Energy_errfunc  = lambda p, x, y: (y - Energy_fitfunc(p, x))
-            E0 = self.Udc_without_axial(self.Vec0, 0) + self.Urf_without_axial(self.Vec0, 0) + self.Ekin_without_axial(self.Vec0, 0)
-            # turn the enegy unit to be J/kB
-            E0 = E0 / kB
-            init  = [E0, CoolingTime_rough, 0]
-            xdata = SampleList
-            ydata = Energy
-            out   = leastsq( Energy_errfunc, init, args=(xdata, ydata))
-            c = out[0]
-            plt.clf()
-            plt.plot(xdata, ydata, label = 'raw data', alpha = 0.5)
-            plt.plot(xdata, Energy_fitfunc(c, xdata), label = 'Fitting Curve')
-            
-            plt.title(r'$A = %.3f\ \sigma = %.8f\ k = %.3f $' %(c[0],abs(c[1]) * 1e6,c[2]))
-            plt.xlabel('Time(s)')
-            plt.ylabel('Energy(K)')
-            FileName = 'CoolingTime_TIME_ENERGY_{}_Wrf=2PI{:.2f}GHz_Wradial=2PI{:.2f}GHz_Waxial=2PI{:.2f}MHz_T={:.2f}us'.format(CoolingMode, wrf / 2 / np.pi / 1e9, wradial / 2 / np.pi / 1e9, waxial / 2 / np.pi / 1e6, T * 1e6)
-            plt.savefig('figures/' + FileName + '.png')
-            plt.show(block = False)
-            
-            
-            print('By energy fitting, Cooling Time is: {:.3f} us'.format(abs(c[1]) * 1e6))
-            print('By energy fitting, the final temperature is: {:.3f}K'.format(c[2] / kB))
-            
-            # Exact Cooling Time and rough
-            CoolingTime = abs(c[1])
-            FinalTemperature_rough = c[2] / kB
-        
-        
-
-        if Aim == 'CoolingTime':
-            return CoolingTime
-
-        
-
-        Energy = []
-
-        if Aim == 'CoolingTime_FinalTemperature':
-            # based on some tests, if the it's secular cooling, then after
-            if CoolingMode == 'secular':
-                EquilibriumTime = 5
-            elif CoolingMode == 'blue':
-                EquilibriumTime = 7
-            else:
-                EquilibriumTime = 5
-            #print(EquilibriumTime * round(CoolingTime_raw / dt))
-            
-            # we assume that after 5 cooling Time: e^-5, the motion is dominant by the noise
-            t_damped = t_damp[EquilibriumTime * round(CoolingTime_rough / dt):]
-            x_damped = x_damp[EquilibriumTime * round(CoolingTime_rough / dt):]
-            y_damped = y_damp[EquilibriumTime * round(CoolingTime_rough / dt):]
-            z_damped = z_damp[EquilibriumTime * round(CoolingTime_rough / dt):]
-            vx_damped = vx_damp[EquilibriumTime * round(CoolingTime_rough / dt):]
-            vy_damped = vy_damp[EquilibriumTime * round(CoolingTime_rough / dt):]
-            vz_damped = vz_damp[EquilibriumTime * round(CoolingTime_rough / dt):]
-            
-        elif Aim == 'FinalTemperature':
-            t_damped = t_damp
-            x_damped = x_damp
-            y_damped = y_damp
-            z_damped = z_damp
-            vx_damped = vx_damp
-            vy_damped = vy_damp
-            vz_damped = vz_damp
-        
-        else:
-            print('AIM ERROR!')
-
-        if SaveData:
-                FileName = '{}_Wrf=2PI{:.2f}GHz_Wradial=2PI{:.2f}GHz_Waxial=2PI{:.2f}MHz_T={:.2f}us'.format(CoolingMode, wrf / 2 / np.pi / 1e9, wradial / 2 / np.pi / 1e9, waxial / 2 / np.pi / 1e6, T * 1e6)
-                np.savez('data/damped_' + FileName, t = t_damped, x = x_damped, vx = vx_damped)
-        
-
-        '''
-        by velocity square
-        '''
-        # Only kinetic energy(meV), but time 2 by Virin Theorem
-        E_kin = np.array([2 * a ** 2  * 0.5 * m / q * 1000 for a in vx_damped])
-        E_kin_average = np.average(E_kin)
-        print('By average kinetic energy, the final Temperature is {:.4f} K'.format(E_kin_average  * q / kB / 1000))
-        # total_energy(meV)
-        E_tot = []
-        for i in np.arange(len(vx_damped)):
-            Vec = x_damped[i], y_damped[i], z_damped[i], vx_damped[i], vy_damped[i], vz_damped[i]
-            E_tot.append((self.Urf_without_axial(Vec, t_damped[i]) + self.Ekin_without_axial(Vec, t_damped[i]) + self.Udc_without_axial(Vec, t_damped))/ q * 1000)
-        
-
-        E_kin_fitfunc  = lambda p, x: p[0]/np.sqrt(x)*np.exp(- x/p[1])
-        E_kin_errfunc  = lambda p, x, y: (y - E_kin_fitfunc(p, x))
-        
-        E_tot_fitfunc  = lambda p, x: p[0]/np.sqrt(x)*np.exp(- x/p[1])
-        E_tot_errfunc  = lambda p, x, y: (y - E_tot_fitfunc(p, x))
-
-        
-        E_kin_n, E_kin_bin_edges,_ = plt.hist(E_kin, 20000, density=True, color='green', alpha=0.75)
-        #plt.title('Histogram for velocity')
-        #plt.show()
-        xdata = 0.5*(E_kin_bin_edges[1:] + E_kin_bin_edges[:-1])
-        ydata = E_kin_n
- 
-
-        init  = [0.5, Temperature / q * kB * 1000]
-
-        out   = leastsq( E_kin_errfunc, init, args=(xdata, ydata))
-        c     = out[0]
-
-        #print("A exp[- (x-mu)/sigma)] + k ")
-       
-        #print("Fit Coefficients:")
-        #print(c[0], c[1])
-        if DrawVelocityHist:
-            plt.clf()
-            plt.plot(xdata, E_kin_fitfunc(c, xdata), label = 'Fitting Curve')
-            plt.plot(xdata, ydata, label = 'raw data')
-            plt.legend()
-            plt.xlabel('Kinetic Energy/meV')
-            plt.ylabel('Probability')
-            plt.title(r'$A = %.3f\ \sigma = %.3f\ $' %(c[0],c[1]))
-            
-            FileName = 'Histogram_for_E_kin'
-            plt.savefig('figures/' + FileName + '.png')
-            plt.show(block = False)
-            np.save('data/xdata_' + FileName + '_' + CoolingMode, xdata)
-            np.save('data/ydata_' + FileName + '_' + CoolingMode, ydata)
-        else:
-            plt.show(block = False)
-        
-        
-        print('By kinetic energy distribution, the final Temperature is {:.4f} K'.format(c[1] * q / kB / 1000))
-        FinalTemperature = c[1] * q / kB / 1000
-        E_tot_n, E_tot_bin_edges,_ = plt.hist(E_tot, 20000, density=True, color='green', alpha=0.75)
-        #plt.title('Histogram for velocity')
-        #plt.show()
-        xdata = 0.5*(E_tot_bin_edges[1:] + E_tot_bin_edges[:-1])
-        ydata = E_tot_n
- 
-
-        init  = [0.5, Temperature / q * kB * 1000]
-
-        out   = leastsq( E_tot_errfunc, init, args=(xdata, ydata))
-        c     = out[0]
-
-        #print("A exp[- (x-mu)/sigma)] + k ")
-       
-        #print("Fit Coefficients:")
-        #print(c[0], c[1])
-        if DrawVelocityHist:
-            plt.clf()
-            plt.plot(xdata, E_tot_fitfunc(c, xdata), label = 'Fitting Curve')
-            plt.plot(xdata, ydata, label = 'raw data')
-            plt.legend()
-            plt.xlabel('Total Energy/meV')
-            plt.ylabel('Probability')
-            plt.title(r'$A = %.3f\ \sigma = %.3f\ $' %(c[0],c[1]))
-            
-            FileName = 'Histogram_for_E_tot'
-            plt.savefig('figures/' + FileName + '.png')
-            plt.show(block = False)
-            np.save('data/xdata_' + FileName + '_' + CoolingMode, xdata)
-            np.save('data/ydata_' + FileName + '_' + CoolingMode, ydata)
-        else:
-            plt.show(block = False)
-        
-        
-        print('By total enrgy distribution, the final Temperature is {:.4f} K'.format(c[1] * q / kB / 1000))
-
-        if Aim == 'CoolingTime_FinalTemperature':
-            return CoolingTime, FinalTemperature
-        
-        elif Aim == 'FinalTemperature':
-            return FinalTemperature
-
-        else:
-            print('AIM ERROR!')
     
-
     def Run(self):
         #sys.modules[__name__].__dict__.clear()
         #get_ipython().magic('reset -sf')
@@ -1305,27 +878,27 @@ class Sinlge_Electron_Cooling(object):
         
             if os.path.exists('data/' + FileName + '_Initial.npz'):
                 print('Loading Previous Initial Simulation Results...')
-                Damping_Ex_Ampl = np.load('data/' + FileName + '_Initial.npz')['Damping_Ex_Ampl']
+                # Damping_Ex_Ampl = np.load('data/' + FileName + '_Initial.npz')['Damping_Ex_Ampl']
                 fres = np.load('data/' + FileName + '_Initial.npz')['fres']
-                phase = np.load('data/' + FileName + '_Initial.npz')['phase']
+                # phase = np.load('data/' + FileName + '_Initial.npz')['phase']
                 NumSecularPeriod = np.load('data/' + FileName + '_Initial.npz')['NumSecularPeriod']
             
             elif os.path.exists('data/' + OtherFileName + '_Initial.npz'):
                 print('Loading Previous Initial Simulation Results...')
-                Damping_Ex_Ampl = np.load('data/' + OtherFileName + '_Initial.npz')['Damping_Ex_Ampl']
+                # Damping_Ex_Ampl = np.load('data/' + OtherFileName + '_Initial.npz')['Damping_Ex_Ampl']
                 fres = np.load('data/' + OtherFileName + '_Initial.npz')['fres']
-                phase = np.load('data/' + OtherFileName + '_Initial.npz')['phase']
+                # phase = np.load('data/' + OtherFileName + '_Initial.npz')['phase']
                 NumSecularPeriod = np.load('data/' + OtherFileName + '_Initial.npz')['NumSecularPeriod']
 
             else:
-                Damping_Ex_Ampl, fres, phase, NumSecularPeriod = self.InitialRun(False, False)
-                np.savez('data/' + FileName + '_Initial', Damping_Ex_Ampl = Damping_Ex_Ampl, fres = fres, phase = phase, NumSecularPeriod = NumSecularPeriod)
+                fres, NumSecularPeriod = self.InitialSimulation(False, False)
+                np.savez('data/' + FileName + '_Initial', fres = fres, NumSecularPeriod = NumSecularPeriod)
             
-            Cooling_Time, FinalTemperature = self.SecondRun(Damping_Ex_Ampl, fres, phase, NumSecularPeriod,
-                                                            DrawPosition = False,
-                                                            DrawVelocity = True, 
-                                                            SaveData = False
-                                                            )
+            Cooling_Time, FinalTemperature = self.Simulation(fres,
+                                                             NumSecularPeriod,
+                                                             DrawPosition=True,
+                                                             DrawVelocity=True,
+                                                             )
             #print(self.count_collapse, self.count_collapse_posi, self.count_collapse_nega)
             # print(self.count_collapse_posi/self.count_collapse, self.count_collapse_nega/self.count_collapse)
             return Cooling_Time, FinalTemperature
@@ -1335,42 +908,36 @@ class Sinlge_Electron_Cooling(object):
         
             if os.path.exists('data/' + FileName + '_Initial.npz'):
                 print('Loading Previous Initial Simulation Results...')
-                Damping_Ex_Ampl = np.load('data/' + FileName + '_Initial.npz')['Damping_Ex_Ampl']
                 fres = np.load('data/' + FileName + '_Initial.npz')['fres']
-                phase = np.load('data/' + FileName + '_Initial.npz')['phase']
                 NumSecularPeriod = np.load('data/' + FileName + '_Initial.npz')['NumSecularPeriod']
             
             elif os.path.exists('data/' + OtherFileName + '_Initial.npz'):
                 print('Loading Previous Initial Simulation Results...')
-                Damping_Ex_Ampl = np.load('data/' + OtherFileName + '_Initial.npz')['Damping_Ex_Ampl']
                 fres = np.load('data/' + OtherFileName + '_Initial.npz')['fres']
-                phase = np.load('data/' + OtherFileName + '_Initial.npz')['phase']
                 NumSecularPeriod = np.load('data/' + OtherFileName + '_Initial.npz')['NumSecularPeriod']
 
             else:
-                Damping_Ex_Ampl, fres, phase, NumSecularPeriod = self.InitialRun(False, False)
-                np.savez('data/' + FileName + '_Initial', Damping_Ex_Ampl = Damping_Ex_Ampl, fres = fres, phase = phase, NumSecularPeriod = NumSecularPeriod)
+                fres, NumSecularPeriod = self.InitialSimulation(False, False)
+                np.savez('data/' + FileName + '_Initial', fres = fres, NumSecularPeriod = NumSecularPeriod)
             
-            Cooling_Time = self.SecondRun(Damping_Ex_Ampl, fres, phase, NumSecularPeriod,
+            Cooling_Time = self.Simulation(fres, NumSecularPeriod,
                                                         DrawPosition = False,
                                                         DrawVelocity = True, 
                                                         SaveData = True
                                                         )
-            print(self.count_collapse, self.count_collapse_small, self.count_collapse_posi, self.count_collapse_nega)
+            #print(self.count_collapse, self.count_collapse_small, self.count_collapse_posi, self.count_collapse_nega)
             return Cooling_Time
 
         elif Aim == 'FinalTemperature':
             if os.path.exists('data/' + FileName + '_Initial.npz'):
                 print('Loading Previous Initial Simulation Results...')
-                Damping_Ex_Ampl = np.load('data/' + FileName + '_Initial.npz')['Damping_Ex_Ampl']
                 fres = np.load('data/' + FileName + '_Initial.npz')['fres']
-                phase = np.load('data/' + FileName + '_Initial.npz')['phase']
                 NumSecularPeriod = np.load('data/' + FileName + '_Initial.npz')['NumSecularPeriod']
             
             else:
-                Damping_Ex_Ampl, fres, phase, NumSecularPeriod = self.InitialRun(False, False)
-                np.savez('data/' + FileName + '_Initial', Damping_Ex_Ampl = Damping_Ex_Ampl, fres = fres, phase = phase, NumSecularPeriod = NumSecularPeriod)
-            Final_Temperature = self.SecondRun(Damping_Ex_Ampl, fres, phase, NumSecularPeriod,
+                fres, NumSecularPeriod = self.InitialSimulation(False, False)
+                np.savez('data/' + FileName + '_Initial', fres = fres, NumSecularPeriod = NumSecularPeriod)
+            Final_Temperature = self.Simulation(fres, NumSecularPeriod,
                                                         DrawPosition = False,
                                                         DrawVelocity = True, 
                                                         SaveData = False
@@ -1381,18 +948,4 @@ class Sinlge_Electron_Cooling(object):
             print('AIM ERROR!')
             pass
             
-        
-        # Version 2: Detailed circuit model, simulation of both electron motion and circuit
-        '''
-        fres, NumSecularPeriod = self.InitialSimulation(False, False)
-        Cooling_Time, FinalTemperature = self.Simulation(
-                                                        fres,
-                                                        NumSecularPeriod,
-                                                        DrawPosition= True,
-                                                        DrawVelocity = True,
-                                                        SaveData = False,
-                                                        DrawVelocityHist= True
-        )
-        '''
-        
 
