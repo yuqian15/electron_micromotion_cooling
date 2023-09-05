@@ -12,9 +12,9 @@ m = 9.10938297e-31 # 9.10938297e-31 kg
 q = 1.6e-19 # 1.6e-19 C
 kB = 1.380649e-23
 CircuitTemperature = 4 # Temperature of the tank circuit = 4K
-TotalTime = 40e-6
+TotalTime = 10e-6
 #Rp = 8e4 #8e4
-Rp = 8e5 # for faster simulation
+Rp = 8e6 # for faster simulation
 Q = 1000
 qx = wradial / wrf
 
